@@ -1,86 +1,131 @@
 import React, {DragEvent, useState} from 'react';
-import s from './App.module.css'
+import './App.css'
+
+type GroupType = {
+    id: number
+    name: string
+}
 
 type ItemType = {
     id: number
-    name: string
-    rank: string
-}
-
-type DragDateType = {
-    id: number
-    initialRang: string
+    rank: string,
+    groups: GroupType[]
 }
 
 export const App = () => {
 
-        const ranks = ['Mentor', 'User']
+        const [boards, setBoards] = useState<ItemType[]>([
+            {
+                id: 1,
+                rank: 'Mentor',
+                groups: [
+                    {id: 1, name: 'Viktor'},
+                    {id: 2, name: 'Evgeny'},
+                    {id: 3, name: 'Petya'}
+                ]
+            },
+            {
+                id: 2,
+                rank: 'User',
+                groups: [
+                    {id: 4, name: 'Egor'},
+                    {id: 5, name: 'Kolya'},
+                    {id: 6, name: 'Tanya'}
+                ]
+            },
+        ])
 
-        const initialItems = [
-            {id: 0, name: 'Evgeny', rank: 'Mentor'},
-            {id: 1, name: 'Viktor', rank: 'User'},
-            {id: 2, name: 'Galya', rank: 'Mentor'},
-            {id: 3, name: 'Petr', rank: 'User'},
-            {id: 4, name: 'Anna', rank: 'Mentor'},
-            {id: 5, name: 'Vitali', rank: 'User'}
-        ]
-
-        const [items, setItems] = useState<ItemType[]>(initialItems)
-        const [dragData, setDragData] = useState({} as DragDateType)
+        const [currentBoard, setCurrentBoard] = useState({} as ItemType)
+        const [currentItem, setCurrentItem] = useState({} as GroupType)
 
 
-        const handleDragStart = (e: DragEvent<HTMLDivElement>, id: number, rank: string) => {
-            setDragData({id: id, initialRang: rank})
-        }
-
-
-        const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        function dragOverHandler(e: DragEvent<HTMLDivElement>) {
             e.preventDefault()
+            if (e.currentTarget.className === 'item') {
+                e.currentTarget.style.boxShadow = '0 4px 3px gray'
+            }
         }
 
-        const changeCategory = (selected: number, rank: string) => {
-            const copyItems = [...items];
+        function dragLeaveHandler(e: DragEvent<HTMLDivElement>) {
+            e.currentTarget.style.boxShadow = 'none'
+        }
 
-            copyItems[selected].rank = rank;
+        function dragStartHandler(e: DragEvent<HTMLDivElement>, board: ItemType, group: GroupType) {
+            setCurrentBoard(board)
+            setCurrentItem(group)
+        }
 
-            setItems(copyItems);
-        };
+        function dragEndHandler(e: DragEvent<HTMLDivElement>) {
+            e.currentTarget.style.boxShadow = 'none'
+        }
 
+        function dragHandler(e: DragEvent<HTMLDivElement>, board: ItemType, group: GroupType) {
+            e.preventDefault()
+            e.stopPropagation()
 
-        const handleDrop = (e: DragEvent<HTMLDivElement>, rank: string) => {
-            const selected = dragData.id;
-            changeCategory(selected, rank);
-        };
+            const currentIndex = currentBoard.groups.indexOf(currentItem)
+            currentBoard.groups.splice(currentIndex, 1)
+
+            const dropIndex = board.groups.indexOf(group)
+            board.groups.splice(dropIndex + 1, 0, currentItem)
+
+            setBoards(boards.map(b => {
+                if (b.id === board.id) {
+                    return board
+                }
+                if (b.id === currentBoard.id) {
+                    return currentBoard
+                }
+                return b
+            }))
+        }
+
+        function dropCardHandler(e: React.DragEvent<HTMLDivElement>, board: ItemType) {
+            e.preventDefault()
+            e.stopPropagation()
+
+            board.groups.push(currentItem)
+
+            const currentIndex = currentBoard.groups.indexOf(currentItem)
+            currentBoard.groups.splice(currentIndex, 1)
+
+            setBoards(boards.map(b => {
+                if (b.id === board.id) {
+                    return board
+                }
+                if (b.id === currentBoard.id) {
+                    return currentBoard
+                }
+                return b
+            }))
+
+        }
 
         return (
-            <div className={s.App}>
-                <div className={s.ranks}>
-                    {
-                        ranks.map((rank, index) => (
-                            <div key={index}
-                                 className={s.rank}
-                                 onDragOver={handleDragOver}
-                                 onDrop={(e) => handleDrop(e, rank)}
+            <div className={'App'}>
+                {boards.map((board) => (
+                    <div key={board.id}
+                         className={'board'}
+                         onDragOver={(e) => dragOverHandler(e)}
+                         onDrop={(e) => dropCardHandler(e, board)}
+                    >
+                        <div className={'board__title'}>{board.rank}</div>
+                        {board.groups.map((group) => (
+                            <div
+                                key={group.id}
+                                className={'item'}
+                                draggable
+                                onDragOver={(e) => dragOverHandler(e)}
+                                onDragLeave={(e) => dragLeaveHandler(e)}
+                                onDragStart={(e) => dragStartHandler(e, board, group)}
+                                onDragEnd={(e) => dragEndHandler(e)}
+                                onDrop={(e) => dragHandler(e, board, group)}
                             >
-                                <h1>{rank}</h1>
-                                <div>
-                                    {
-                                        items
-                                            .filter(item => item.rank === rank)
-                                            .map((item) => (
-                                                <div className={s.item}
-                                                     key={item.id}
-                                                     draggable
-                                                     onDragStart={(e) => handleDragStart(e, item.id, rank)}
-                                                >
-                                                    {item.name}
-                                                </div>
-                                            ))
-                                    }
-                                </div>
+                                {group.name}
                             </div>
                         ))}
-                </div>
+                    </div>
+                ))}
             </div>
         );
     }
